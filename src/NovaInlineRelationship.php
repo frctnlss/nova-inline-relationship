@@ -446,17 +446,20 @@ class NovaInlineRelationship extends Field
      */
     protected function getFieldsFromResource($model, $attribute): Collection
     {
+        $request = app(NovaRequest::class);
+
         $resource = ! empty($this->resourceClass)
             ? new $this->resourceClass($model)
             : Nova::newResourceFromModel($model->{$attribute}()->getRelated());
 
         return collect($resource->availableFields(app(NovaRequest::class)))
-            ->reject(function ($field) use ($resource) {
+            ->reject(function ($field) use ($request, $resource) {
                 return $field instanceof ListableField ||
                     $field instanceof ResourceToolElement ||
                     $field->attribute === 'ComputedField' ||
                     ($field instanceof ID && $field->attribute === $resource->resource->getKeyName()) ||
-                    collect(class_uses($field))->contains(ResolvesReverseRelation::class) ||
+                    collect(class_uses($field))->contains(ResolvesReverseRelation::class) ?
+                        !empty($field->resourceClass) && $field->resourceClass === $request->resource() : false ||
                     $field instanceof self;
             });
     }
